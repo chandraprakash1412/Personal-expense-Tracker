@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 
-# Backend
 from scripts.expense_tracker import main
 
 # -----------------------------
@@ -17,7 +16,7 @@ OUTPUT_FILE = "output/expense_data.xlsx"
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # -----------------------------
-# Upload Section
+# Upload
 # -----------------------------
 st.subheader("📂 Upload Bank Statement (PDF)")
 
@@ -63,7 +62,27 @@ if os.path.exists(OUTPUT_FILE):
     df = pd.read_excel(OUTPUT_FILE)
 
     # -----------------------------
-    # Preprocessing
+    # CLEAN COLUMN NAMES
+    # -----------------------------
+    df.columns = df.columns.str.strip()
+
+    # -----------------------------
+    # AUTO DETECT AMOUNT COLUMN
+    # -----------------------------
+    possible_cols = ["Amount", "Debit", "Withdrawal", "Withdraw", "Amt"]
+
+    amount_col = None
+    for col in possible_cols:
+        if col in df.columns:
+            amount_col = col
+            break
+
+    if amount_col is None:
+        st.error(f"❌ No Amount column found. Columns are: {list(df.columns)}")
+        st.stop()
+
+    # -----------------------------
+    # DATE PROCESS
     # -----------------------------
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
 
@@ -71,7 +90,7 @@ if os.path.exists(OUTPUT_FILE):
     df["Year"] = df["Date"].dt.year
 
     # -----------------------------
-    # Sidebar Filters (SLICER)
+    # SIDEBAR FILTER
     # -----------------------------
     st.sidebar.header("🔍 Filters")
 
@@ -87,54 +106,50 @@ if os.path.exists(OUTPUT_FILE):
         default=df["Month"].dropna().unique()
     )
 
-    # Apply filter
     filtered_df = df[
         (df["Year"].isin(selected_years)) &
         (df["Month"].isin(selected_months))
     ]
 
     # -----------------------------
-    # Charts (Side by Side)
+    # CHARTS
     # -----------------------------
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("📅 Monthly Expense")
 
-        monthly = (
-            filtered_df.groupby("Month")["Amount"]
-            .sum()
-            .reindex(df["Month"].unique())
-        )
+        monthly = filtered_df.groupby("Month")[amount_col].sum()
 
         st.bar_chart(monthly)
 
     with col2:
         st.subheader("📆 Yearly Expense")
 
-        yearly = filtered_df.groupby("Year")["Amount"].sum()
+        yearly = filtered_df.groupby("Year")[amount_col].sum()
 
         st.bar_chart(yearly)
 
     # -----------------------------
-    # Transactions Table
+    # TRANSACTIONS
     # -----------------------------
     st.subheader("📋 Transactions")
-
     st.dataframe(filtered_df, use_container_width=True)
 
     # -----------------------------
-    # Mobile Recharge Monthly
+    # MOBILE RECHARGE
     # -----------------------------
-    st.subheader("📱 Mobile Recharge (Monthly)")
+    if "Category" in df.columns:
 
-    recharge_df = filtered_df[
-        filtered_df["Category"].str.contains("mobile|recharge", case=False, na=False)
-    ]
+        st.subheader("📱 Mobile Recharge (Monthly)")
 
-    recharge_monthly = recharge_df.groupby("Month")["Amount"].sum()
+        recharge_df = filtered_df[
+            filtered_df["Category"].str.contains("mobile|recharge", case=False, na=False)
+        ]
 
-    st.bar_chart(recharge_monthly)
+        recharge_monthly = recharge_df.groupby("Month")[amount_col].sum()
+
+        st.bar_chart(recharge_monthly)
 
 else:
     st.warning("⚠️ Run analysis to see dashboard")
