@@ -116,18 +116,11 @@ if st.session_state.analysis_done and os.path.exists(OUTPUT_FILE):
     ]
 
     # -----------------------------
-    # TOTAL CARDS (🔥 NEW)
+    # TOTAL CARD (ONLY ONE NOW)
     # -----------------------------
     total_expense = filtered_df[amount_col].sum()
 
-    col_total1, col_total2 = st.columns(2)
-
-    with col_total1:
-        st.metric("💰 Total Expense", f"₹ {round(total_expense, 2)}")
-
-    with col_total2:
-        yearly_total = filtered_df.groupby("Year")[amount_col].sum().sum()
-        st.metric("📆 Total Yearly Expense", f"₹ {round(yearly_total, 2)}")
+    st.metric("💰 Total Expense", f"₹ {round(total_expense, 2)}")
 
     # -----------------------------
     # Charts
