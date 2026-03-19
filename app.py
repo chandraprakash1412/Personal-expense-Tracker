@@ -16,7 +16,7 @@ OUTPUT_FILE = "output/expense_data.xlsx"
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # -----------------------------
-# SESSION STATE (IMPORTANT)
+# SESSION STATE
 # -----------------------------
 if "analysis_done" not in st.session_state:
     st.session_state.analysis_done = False
@@ -62,13 +62,12 @@ if st.button("🚀 Run Analysis"):
     st.success("Analysis completed ✅")
 
 # -----------------------------
-# SHOW ONLY AFTER RUN
+# SHOW DASHBOARD
 # -----------------------------
 if st.session_state.analysis_done and os.path.exists(OUTPUT_FILE):
 
     df = pd.read_excel(OUTPUT_FILE)
 
-    # Clean column names
     df.columns = df.columns.str.strip()
 
     # Detect amount column
@@ -86,11 +85,9 @@ if st.session_state.analysis_done and os.path.exists(OUTPUT_FILE):
 
     # Date processing
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-
     df["Month"] = df["Date"].dt.month_name()
     df["Year"] = df["Date"].dt.year
 
-    # Month order fix
     month_order = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -107,7 +104,6 @@ if st.session_state.analysis_done and os.path.exists(OUTPUT_FILE):
     selected_years = st.sidebar.multiselect("Select Year", years, default=years)
     selected_months = st.sidebar.multiselect("Select Month", months, default=months)
 
-    # 👉 Agar kuch select nahi → full data
     if not selected_years:
         selected_years = years
 
@@ -118,6 +114,20 @@ if st.session_state.analysis_done and os.path.exists(OUTPUT_FILE):
         (df["Year"].isin(selected_years)) &
         (df["Month"].isin(selected_months))
     ]
+
+    # -----------------------------
+    # TOTAL CARDS (🔥 NEW)
+    # -----------------------------
+    total_expense = filtered_df[amount_col].sum()
+
+    col_total1, col_total2 = st.columns(2)
+
+    with col_total1:
+        st.metric("💰 Total Expense", f"₹ {round(total_expense, 2)}")
+
+    with col_total2:
+        yearly_total = filtered_df.groupby("Year")[amount_col].sum().sum()
+        st.metric("📆 Total Yearly Expense", f"₹ {round(yearly_total, 2)}")
 
     # -----------------------------
     # Charts
@@ -150,7 +160,7 @@ if st.session_state.analysis_done and os.path.exists(OUTPUT_FILE):
     st.dataframe(filtered_df, use_container_width=True)
 
     # -----------------------------
-    # MOBILE RECHARGE (FROM TO WHOM)
+    # Mobile Recharge
     # -----------------------------
     if "To Whom" in df.columns:
 
