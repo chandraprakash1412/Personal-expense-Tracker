@@ -1,9 +1,11 @@
 import streamlit as st
-import subprocess
 import pandas as pd
 import os
 import shutil
 import calendar
+
+# 👇 IMPORTANT FIX (subprocess हटाया)
+from scripts.expense_tracker import main
 
 # -----------------------------
 # Config
@@ -12,33 +14,25 @@ st.set_page_config(layout="wide")
 st.title("💰 Expense Dashboard")
 
 DATA_FOLDER = "data"
-SCRIPT_PATH = "scripts/expense_tracker.py"
 OUTPUT_FILE = "output/expense_data.xlsx"
 
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # -----------------------------
-# CSS (FIXED ONLY THIS PART)
+# CSS
 # -----------------------------
 st.markdown(
     """
 <style>
-
-/* Push content below navbar */
 .block-container {
     padding-top: 5rem !important;
 }
-
-/* Improve title visibility */
 h1 {
     margin-top: 0.5rem !important;
 }
-
-/* Cursor fix */
 div[data-baseweb="select"] > div {
     cursor: pointer !important;
 }
-
 </style>
 """,
     unsafe_allow_html=True,
@@ -78,11 +72,11 @@ if st.button("🚀 Run Analysis"):
         st.stop()
 
     with st.spinner("⏳ Processing..."):
-        result = subprocess.run(["python", SCRIPT_PATH], capture_output=True, text=True)
-
-        if result.returncode != 0:
-            st.error("❌ Script error")
-            st.text(result.stderr)
+        try:
+            # 👇 IMPORTANT FIX (same environment me run)
+            main()
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
             st.stop()
 
     st.success("✅ Analysis Completed")
@@ -106,7 +100,7 @@ if st.session_state.run_clicked:
     df["Month Name"] = df["Month"].apply(lambda x: calendar.month_abbr[x])
 
     # -----------------------------
-    # MULTI FILTERS
+    # Filters
     # -----------------------------
     st.sidebar.header("🔍 Filters")
 
@@ -117,7 +111,6 @@ if st.session_state.run_clicked:
     month_names = [calendar.month_abbr[m] for m in months]
     selected_month_names = st.sidebar.multiselect("Select Month(s)", month_names)
 
-    # Convert month names to numbers
     selected_months = [list(calendar.month_abbr).index(m) for m in selected_month_names]
 
     # -----------------------------
@@ -138,13 +131,10 @@ if st.session_state.run_clicked:
     st.metric("💸 Total Expense", f"₹ {total_expense:,.2f}")
 
     # -----------------------------
-    # Charts Layout
+    # Charts
     # -----------------------------
     col1, col2 = st.columns(2)
 
-    # -----------------------------
-    # Monthly Chart
-    # -----------------------------
     with col1:
         st.subheader("📅 Monthly Expenses")
 
@@ -159,12 +149,8 @@ if st.session_state.run_clicked:
         )
 
         monthly = monthly.sort_values(["Year", "Month"])
-
         st.bar_chart(monthly.set_index("Label")["Withdrawal"])
 
-    # -----------------------------
-    # Yearly Chart
-    # -----------------------------
     with col2:
         st.subheader("📆 Yearly Expenses")
 
@@ -178,7 +164,7 @@ if st.session_state.run_clicked:
     st.dataframe(filtered_df, use_container_width=True)
 
     # -----------------------------
-    # Mobile Recharge Chart
+    # Mobile Recharge
     # -----------------------------
     st.subheader("📱 Mobile Recharge Expenses")
 
@@ -206,4 +192,4 @@ if st.session_state.run_clicked:
         st.bar_chart(recharge_monthly.set_index("Label")["Withdrawal"])
 
 else:
-    st.info("👉 Upload file (optional) and click 'Run Analysis'")
+    st.info("👉 Upload file and click 'Run Analysis'")
